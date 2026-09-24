@@ -1,0 +1,14 @@
+[package]
+name = "chabot-backgrounder-linux"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+backgrounder-core = { path = "../../crates/backgrounder-core" }
+gtk4 = "0.10"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gdk4-x11 = "0.10"
+x11rb = "0.13.2"
+
+[workspace]

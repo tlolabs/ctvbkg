@@ -1,0 +1,7 @@
+[workspace]
+members = ["crates/backgrounder-core"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "MIT"

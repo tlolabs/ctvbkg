@@ -1,0 +1,23 @@
+param([ValidateSet('x64','arm64')][string]$Architecture = 'x64')
+$ErrorActionPreference = 'Stop'
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$rid = "win-$Architecture"
+$rustTarget = if ($Architecture -eq 'arm64') { 'aarch64-pc-windows-msvc' } else { 'x86_64-pc-windows-msvc' }
+$probeDir = Join-Path $root 'dist/ffprobe-windows'
+if (-not (Test-Path (Join-Path $probeDir 'ffprobe.exe'))) { throw 'Build ffprobe with build_ffprobe_windows.sh in the matching MSYS2 shell first.' }
+Push-Location $root
+try {
+    rustup target add $rustTarget
+    cargo test -p backgrounder-core
+    cargo build --release -p backgrounder-core --target $rustTarget
+    $publish = Join-Path $root "dist/windows-$Architecture"
+    if (Test-Path $publish) { Remove-Item $publish -Recurse -Force }
+    dotnet publish native/windows/ChabotBackgrounder.csproj -c Release -r $rid --self-contained true -o $publish
+    Copy-Item (Join-Path $root "target/$rustTarget/release/backgrounder_core.dll") $publish
+    Copy-Item (Join-Path $probeDir '*') $publish
+    & (Join-Path $publish 'ffprobe.exe') -v error -version | Out-Null
+    $zip = Join-Path $root "dist/ChabotBackgrounder-$rid-unsigned.zip"
+    if (Test-Path $zip) { Remove-Item $zip }
+    Compress-Archive -Path (Join-Path $publish '*') -DestinationPath $zip
+    Write-Output "Built $zip"
+} finally { Pop-Location }

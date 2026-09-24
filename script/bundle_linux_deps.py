@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Copy the linked GTK4/runtime libraries into an AppDir without bundling glibc."""
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+appdir = Path(sys.argv[1])
+queue = [Path(value) for value in sys.argv[2:]]
+seen = set()
+excluded = re.compile(r"^(?:ld-linux|libc\.|libm\.|libdl\.|libpthread\.|librt\.|libresolv\.|libnss_|libutil\.)")
+while queue:
+    binary = queue.pop()
+    if binary in seen:
+        continue
+    seen.add(binary)
+    result = subprocess.run(["ldd", str(binary)], text=True, capture_output=True, check=True)
+    for line in result.stdout.splitlines():
+        if "=> not found" in line:
+            raise RuntimeError(f"Unresolved library for {binary}: {line.strip()}")
+        match = re.search(r"=>\s+(/\S+)", line)
+        if not match:
+            continue
+        dependency = Path(match.group(1))
+        if excluded.match(dependency.name):
+            continue
+        destination = appdir / "usr/lib" / dependency.name
+        if not destination.exists():
+            shutil.copy2(dependency, destination)
+            queue.append(destination)

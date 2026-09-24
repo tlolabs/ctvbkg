@@ -1,0 +1,4 @@
+module CBackgrounder [system] {
+  header "include/backgrounder.h"
+  export *
+}

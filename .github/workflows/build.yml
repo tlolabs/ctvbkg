@@ -1,0 +1,100 @@
+name: Build desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Test engine
+        run: cargo test -p backgrounder-core
+      - name: Build universal package
+        run: ./script/release_macos.sh --unsigned
+      - name: Smoke test bundled probe
+        run: dist/ChabotBackgrounder.app/Contents/Resources/ffprobe -demuxers | grep -q mpeg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChabotBackgrounder-macos-universal-unsigned
+          path: dist/ChabotBackgrounder-universal-unsigned.dmg
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-2025
+            msystem: UCRT64
+            packages: make diffutils mingw-w64-ucrt-x86_64-gcc
+          - arch: arm64
+            runner: windows-11-arm
+            msystem: CLANGARM64
+            packages: make diffutils mingw-w64-clang-aarch64-clang
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: ${{ matrix.packages }}
+      - name: Build LGPL probe
+        shell: msys2 {0}
+        run: ./script/build_ffprobe_windows.sh
+      - name: Package native app
+        shell: pwsh
+        run: ./script/release_windows.ps1 -Architecture ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChabotBackgrounder-win-${{ matrix.arch }}-unsigned
+          path: dist/ChabotBackgrounder-win-${{ matrix.arch }}-unsigned.zip
+
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install GTK4 build tools
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgirepository1.0-dev xvfb curl
+      - name: Test engine
+        run: cargo test -p backgrounder-core
+      - name: Get AppImage packager
+        run: |
+          curl --fail --location --silent --show-error "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-${{ matrix.arch }}.AppImage" -o appimagetool
+          chmod +x appimagetool
+      - name: Build AppImage
+        env:
+          APPIMAGETOOL: ${{ github.workspace }}/appimagetool
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: ./script/release_linux.sh
+      - name: Smoke test AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          set +e
+          timeout 8s xvfb-run -a "dist/ChabotBackgrounder-linux-${{ matrix.arch }}.AppImage"
+          result=$?
+          test "$result" -eq 124
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ChabotBackgrounder-linux-${{ matrix.arch }}
+          path: dist/ChabotBackgrounder-linux-${{ matrix.arch }}.AppImage
