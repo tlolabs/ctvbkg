@@ -14,7 +14,7 @@ cargo build --manifest-path "$ROOT_DIR/native/linux/Cargo.toml" --release
 APPDIR="$ROOT_DIR/dist/ChabotBackgrounder-$ARCH.AppDir"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" "$APPDIR/usr/share/glib-2.0/schemas"
-cp "$ROOT_DIR/native/linux/target/release/chabot-backgrounder" "$APPDIR/usr/bin/"
+cp "$ROOT_DIR/native/linux/target/release/chabot-backgrounder-linux" "$APPDIR/usr/bin/chabot-backgrounder"
 cp "$PROBE_DIR/ffprobe" "$APPDIR/usr/bin/"
 cp "$PROBE_DIR/FFmpeg-LICENSE.txt" "$PROBE_DIR/FFmpeg-BUILD.txt" "$PROBE_DIR/ffmpeg-9.0.2-source.tar.xz" "$APPDIR/usr/share/"
 cp /usr/share/glib-2.0/schemas/gschemas.compiled "$APPDIR/usr/share/glib-2.0/schemas/"

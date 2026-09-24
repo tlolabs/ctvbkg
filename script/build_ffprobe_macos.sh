@@ -45,7 +45,7 @@ lipo -create "$ROOT_DIR/dist/ffprobe-arm64" "$ROOT_DIR/dist/ffprobe-x86_64" -out
 chmod +x "$OUTPUT"
 "$OUTPUT" -L > "$ROOT_DIR/dist/FFmpeg-LICENSE.txt"
 "$OUTPUT" -version > "$ROOT_DIR/dist/FFmpeg-BUILD.txt"
-if ! "$OUTPUT" -demuxers 2>/dev/null | rg -q 'mpeg +MPEG-PS'; then
+if ! "$OUTPUT" -demuxers 2>/dev/null | grep -Eq 'mpeg +MPEG-PS'; then
   echo "Built ffprobe lacks the MPEG-PS demuxer" >&2
   exit 1
 fi
@@ -53,7 +53,7 @@ if [[ -n "${SAMPLE_MPG:-}" ]]; then
   "$OUTPUT" -v error -select_streams v:0 -show_entries format=duration -of default=noprint_wrappers=1 "$SAMPLE_MPG" >/dev/null
 fi
 cp "$ARCHIVE" "$ROOT_DIR/dist/ffmpeg-$VERSION-source.tar.xz"
-if rg -q 'GNU General Public License' "$ROOT_DIR/dist/FFmpeg-LICENSE.txt"; then
+if grep -q 'GNU General Public License' "$ROOT_DIR/dist/FFmpeg-LICENSE.txt"; then
   echo "Expected an LGPL-only ffprobe build, but found GPL terms" >&2
   exit 1
 fi

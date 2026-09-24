@@ -19,17 +19,19 @@ mkdir "$BUILD_ROOT/build"
 cd "$BUILD_ROOT/build"
 if [[ "${MSYSTEM:-}" == CLANGARM64 ]]; then
   ARCH=aarch64
+  COMPILER=clang
 else
   ARCH=x86_64
+  COMPILER=gcc
 fi
 "$BUILD_ROOT/ffmpeg-$VERSION/configure" \
-  --target-os=mingw32 --arch="$ARCH" --extra-ldflags=-static \
+  --target-os=mingw32 --arch="$ARCH" --cc="$COMPILER" --extra-ldflags=-static \
   --disable-shared --enable-static --disable-asm --disable-autodetect \
   --disable-gpl --disable-nonfree --disable-network --disable-doc \
   --disable-programs --enable-ffprobe --disable-everything \
   --enable-demuxer=mpegps --enable-parser=mpegvideo \
   --enable-decoder=mpeg2video --enable-protocol=file
-make -j4 ffprobe
+make -j4 ffprobe.exe
 cp ffprobe.exe "$OUTPUT_DIR/ffprobe.exe"
 "$OUTPUT_DIR/ffprobe.exe" -L > "$OUTPUT_DIR/FFmpeg-LICENSE.txt"
 "$OUTPUT_DIR/ffprobe.exe" -version > "$OUTPUT_DIR/FFmpeg-BUILD.txt"
